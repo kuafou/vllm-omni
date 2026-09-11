@@ -201,4 +201,7 @@ def test_config_sequence_parallel_size_is_used_before_groups_initialize(monkeypa
         ulysses_degree=expected_size,
     )
 
-    assert _get_sequence_parallel_size(config) == expected_size
+    sequence_parallel_size = _get_sequence_parallel_size(config)
+
+    assert sequence_parallel_size == expected_size
+    assert isinstance(sequence_parallel_size, int)

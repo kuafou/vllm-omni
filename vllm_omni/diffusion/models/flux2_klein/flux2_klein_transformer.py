@@ -61,7 +61,8 @@ logger = init_logger(__name__)
 def _get_sequence_parallel_size(parallel_config: DiffusionParallelConfig) -> int:
     if model_parallel_is_initialized():
         return get_sequence_parallel_world_size()
-    return parallel_config.sequence_parallel_size
+    configured_size = parallel_config.sequence_parallel_size
+    return configured_size if configured_size is not None else 1
 
 
 if TYPE_CHECKING:
