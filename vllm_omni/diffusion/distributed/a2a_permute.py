@@ -67,7 +67,17 @@ def _ensure_built() -> None:
         src = os.path.join(here, "csrc", "a2a_permute.cu")
         site_packages = sysconfig.get_paths()["purelib"]
         nvidia_root = os.path.join(site_packages, "nvidia")
-        include_paths = glob.glob(os.path.join(nvidia_root, "*", "include"))
+        # Do not put the wheel-bundled CUDA runtime headers ahead of the
+        # toolkit selected by CUDA_HOME.  Even nominally identical CUDA
+        # versions can contain incompatible compiler-internal launch macros
+        # (for example, CUDA 13's one- vs two-argument __cudaLaunch), which
+        # makes nvcc-generated host stubs fail to compile.  Component headers
+        # such as NCCL/CUDNN remain necessary and safe to add explicitly.
+        include_paths = [
+            path
+            for path in glob.glob(os.path.join(nvidia_root, "*", "include"))
+            if not os.path.isfile(os.path.join(path, "crt", "host_runtime.h"))
+        ]
         nccl_libs = glob.glob(os.path.join(nvidia_root, "nccl", "lib", "libnccl.so*"))
         if not nccl_libs:
             raise RuntimeError("a2a_permute: could not locate nvidia-nccl libnccl.so")
