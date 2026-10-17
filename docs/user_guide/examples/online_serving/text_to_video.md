@@ -2,13 +2,12 @@
 
 Source <https://github.com/vllm-project/vllm-omni/tree/main/examples/online_serving/text_to_video>.
 
-
 This example demonstrates how to deploy text-to-video models for online video generation using vLLM-Omni.
 
 ## Supported Models
 
 | Model | Model ID |
-|-------|----------|
+| --- | --- |
 | Wan2.1 T2V (1.3B) | `Wan-AI/Wan2.1-T2V-1.3B-Diffusers` |
 | Wan2.1 T2V (14B) | `Wan-AI/Wan2.1-T2V-14B-Diffusers` |
 | Wan2.2 T2V | `Wan-AI/Wan2.2-T2V-A14B-Diffusers` |
@@ -21,7 +20,7 @@ This example demonstrates how to deploy text-to-video models for online video ge
 #### Basic Start
 
 ```bash
-vllm serve Wan-AI/Wan2.2-T2V-A14B-Diffusers --omni --port 8091
+vllm serve Wan-AI/Wan2.2-T2V-A14B-Diffusers --omni --port 8098
 ```
 
 #### Start with Parameters
@@ -35,7 +34,7 @@ bash run_server.sh
 The script allows overriding:
 
 - `MODEL` (default: `Wan-AI/Wan2.2-T2V-A14B-Diffusers`)
-- `PORT` (default: `8091`)
+- `PORT` (default: `8098`)
 - `BOUNDARY_RATIO` (default: `0.875`)
 - `FLOW_SHIFT` (default: `5.0`)
 - `CACHE_BACKEND` (default: `none`)
@@ -73,7 +72,7 @@ file. Metadata is returned via response headers:
 - `X-Inference-Time-S`: wall-clock inference time in seconds
 
 ```bash
-curl -X POST http://localhost:8091/v1/videos/sync \
+curl -X POST http://localhost:8098/v1/videos/sync \
   -F "prompt=Two anthropomorphic cats in comfy boxing gear and bright gloves fight intensely on a spotlighted stage." \
   -F "size=832x480" \
   -F "num_frames=33" \
@@ -121,7 +120,7 @@ See also: [Configuration Options](../../../configuration/README.md)
 bash run_curl_text_to_video.sh
 
 # Or execute directly (OpenAI-style multipart)
-create_response=$(curl -s http://localhost:8091/v1/videos \
+create_response=$(curl -s http://localhost:8098/v1/videos \
   -H "Accept: application/json" \
   -F "prompt=Two anthropomorphic cats in comfy boxing gear and bright gloves fight intensely on a spotlighted stage." \
   -F "width=832" \
@@ -138,7 +137,7 @@ create_response=$(curl -s http://localhost:8091/v1/videos \
 
 video_id=$(echo "$create_response" | jq -r '.id')
 while true; do
-  status=$(curl -s "http://localhost:8091/v1/videos/${video_id}" | jq -r '.status')
+  status=$(curl -s "http://localhost:8098/v1/videos/${video_id}" | jq -r '.status')
   if [ "$status" = "completed" ]; then
     break
   fi
@@ -149,8 +148,8 @@ while true; do
   sleep 2
 done
 
-curl -s "http://localhost:8091/v1/videos/${video_id}" | jq .
-curl -L "http://localhost:8091/v1/videos/${video_id}/content" -o wan22_output.mp4
+curl -s "http://localhost:8098/v1/videos/${video_id}" | jq .
+curl -L "http://localhost:8098/v1/videos/${video_id}/content" -o wan22_output.mp4
 ```
 
 ## Request Format
@@ -158,14 +157,14 @@ curl -L "http://localhost:8091/v1/videos/${video_id}/content" -o wan22_output.mp
 ### Simple Text-to-Video Generation
 
 ```bash
-curl -X POST http://localhost:8091/v1/videos \
+curl -X POST http://localhost:8098/v1/videos \
   -F "prompt=A cinematic view of a futuristic city at sunset"
 ```
 
 ### Generation with Parameters
 
 ```bash
-curl -X POST http://localhost:8091/v1/videos \
+curl -X POST http://localhost:8098/v1/videos \
   -F "prompt=A cinematic view of a futuristic city at sunset" \
   -F "width=832" \
   -F "height=480" \
@@ -185,24 +184,24 @@ curl -X POST http://localhost:8091/v1/videos \
 
 ## Generation Parameters
 
-| Parameter             | Type   | Default | Description                                      |
-| --------------------- | ------ | ------- | ------------------------------------------------ |
-| `prompt`              | str    | -       | Text description of the desired video            |
-| `seconds`             | str    | None    | Clip duration in seconds                         |
-| `size`                | str    | None    | Output size in `WIDTHxHEIGHT` format             |
-| `negative_prompt`     | str    | None    | Negative prompt                                  |
-| `width`               | int    | None    | Video width in pixels                            |
-| `height`              | int    | None    | Video height in pixels                           |
-| `num_frames`          | int    | 1       | Number of frames to generate; set explicitly for video generation |
-| `fps`                 | int    | None    | Frames per second for output video               |
-| `num_inference_steps` | int    | None    | Number of denoising steps                        |
-| `guidance_scale`      | float  | None    | CFG guidance scale (low-noise stage)             |
-| `guidance_scale_2`    | float  | None    | CFG guidance scale (high-noise stage, Wan2.2)     |
-| `boundary_ratio`      | float  | None    | Boundary split ratio for low/high DiT (Wan2.2)   |
-| `flow_shift`          | float  | None    | Scheduler flow shift (Wan2.2)                    |
-| `seed`                | int    | None    | Random seed (reproducible)                       |
-| `num_outputs_per_prompt` | int  | 1       | Number of videos to generate (1-10, MiniMax H3); only the first is returned, see below |
-| `lora`                | object | None    | LoRA configuration                               |
+| Parameter | Type | Default | Description |
+| --- | --- | --- | --- |
+| `prompt` | str | - | Text description of the desired video |
+| `seconds` | str | None | Clip duration in seconds |
+| `size` | str | None | Output size in `WIDTHxHEIGHT` format |
+| `negative_prompt` | str | None | Negative prompt |
+| `width` | int | None | Video width in pixels |
+| `height` | int | None | Video height in pixels |
+| `num_frames` | int | None | Number of frames; when omitted, uses the model-specific default |
+| `fps` | int | None | Frames per second for output video |
+| `num_inference_steps` | int | None | Number of denoising steps |
+| `guidance_scale` | float | None | CFG guidance scale (low-noise stage) |
+| `guidance_scale_2` | float | None | CFG guidance scale (high-noise stage, Wan2.2) |
+| `boundary_ratio` | float | None | Boundary split ratio for low/high DiT (Wan2.2) |
+| `flow_shift` | float | None | Scheduler flow shift (Wan2.2) |
+| `seed` | int | None | Random seed (reproducible) |
+| `num_outputs_per_prompt` | int | 1 | Number of videos to generate (1-10, MiniMax H3); only the first is returned, see below |
+| `lora` | object | None | LoRA configuration |
 | `enable_frame_interpolation` | bool | false | Enable RIFE frame interpolation before MP4 encoding |
 | `frame_interpolation_exp` | int | 1 | Interpolation exponent; 1=2x temporal resolution, 2=4x |
 | `frame_interpolation_scale` | float | 1.0 | RIFE inference scale; use 0.5 for high-resolution inputs |
@@ -231,7 +230,7 @@ device without blocking the FastAPI event loop.
 Example: generate 5 frames and interpolate to 9 frames:
 
 ```bash
-curl -X POST http://localhost:8091/v1/videos/sync \
+curl -X POST http://localhost:8098/v1/videos/sync \
   -F "prompt=A dog running through a park" \
   -F "num_frames=5" \
   -F "fps=8" \
@@ -261,32 +260,32 @@ curl -X POST http://localhost:8091/v1/videos/sync \
 ### Retrieve a job
 
 ```bash
-curl -s http://localhost:8091/v1/videos/${video_id} | jq .
+curl -s http://localhost:8098/v1/videos/${video_id} | jq .
 ```
 
 ### List jobs
 
 ```bash
-curl -s http://localhost:8091/v1/videos | jq .
+curl -s http://localhost:8098/v1/videos | jq .
 ```
 
 ### Download the completed video
 
 ```bash
-curl -L http://localhost:8091/v1/videos/${video_id}/content -o wan22_output.mp4
+curl -L http://localhost:8098/v1/videos/${video_id}/content -o wan22_output.mp4
 ```
 
 ### Delete a job and its stored file
 
 ```bash
-curl -X DELETE http://localhost:8091/v1/videos/${video_id} | jq .
+curl -X DELETE http://localhost:8098/v1/videos/${video_id} | jq .
 ```
 
 ## Poll Until Complete
 
 ```bash
 while true; do
-  status=$(curl -s http://localhost:8091/v1/videos/${video_id} | jq -r '.status')
+  status=$(curl -s http://localhost:8098/v1/videos/${video_id} | jq -r '.status')
   if [ "$status" = "completed" ]; then
     break
   fi
@@ -304,18 +303,15 @@ done
 vllm serve Lightricks/LTX-2 --omni --port 8098
 ```
 
-See the [LTX-2 recipe](../../../../recipes/LTX/LTX-2.md) for all checkpoints,
+See the [LTX-2 recipe](https://github.com/vllm-project/vllm-omni/blob/main/recipes/LTX/LTX-2.md) for all checkpoints,
 pipeline selection, requests, defaults, and advanced options.
 
 ## Example materials
 
-??? abstract "response.json"
-    ``````json
-    --8<-- "examples/online_serving/text_to_video/response.json"
-    ``````
 ??? abstract "run_curl_ltx2.sh"
     ``````sh
     --8<-- "examples/online_serving/text_to_video/run_curl_ltx2.sh"
+    ``````
 ??? abstract "run_curl_hunyuan_video_15.sh"
     ``````sh
     --8<-- "examples/online_serving/text_to_video/run_curl_hunyuan_video_15.sh"
@@ -331,6 +327,7 @@ pipeline selection, requests, defaults, and advanced options.
 ??? abstract "run_server_ltx2.sh"
     ``````sh
     --8<-- "examples/online_serving/text_to_video/run_server_ltx2.sh"
+    ``````
 ??? abstract "run_server_hunyuan_video_15.sh"
     ``````sh
     --8<-- "examples/online_serving/text_to_video/run_server_hunyuan_video_15.sh"
