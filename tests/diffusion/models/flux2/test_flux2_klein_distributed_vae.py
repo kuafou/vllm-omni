@@ -1,14 +1,17 @@
 # SPDX-License-Identifier: Apache-2.0
 # SPDX-FileCopyrightText: Copyright contributors to the vLLM-Omni project
 
-from types import SimpleNamespace
-
+import pytest
 import torch
+from diffusers.configuration_utils import FrozenDict
 
+from vllm_omni.diffusion.data import DiffusionParallelConfig, OmniDiffusionConfig
 from vllm_omni.diffusion.distributed.autoencoders.autoencoder_kl_flux2 import (
     DistributedAutoencoderKLFlux2,
 )
 from vllm_omni.diffusion.models.flux2_klein import pipeline_flux2_klein
+
+pytestmark = [pytest.mark.core_model, pytest.mark.cpu, pytest.mark.diffusion]
 
 
 class _Component:
@@ -19,14 +22,16 @@ class _Component:
         return self
 
 
-def test_klein_pipeline_loads_distributed_vae(monkeypatch) -> None:
+@pytest.mark.parametrize("vae_parallel_mode", ["tile", "batch"])
+@pytest.mark.parametrize("vae_patch_parallel_size", [1, 2])
+def test_klein_pipeline_loads_distributed_vae(monkeypatch, vae_parallel_mode, vae_patch_parallel_size) -> None:
     loaded_factories = {}
 
     def fake_load(factory, _model, *, subfolder, **_kwargs):
         loaded_factories[subfolder] = factory
         if subfolder == "vae":
-            return _Component(SimpleNamespace(block_out_channels=[1, 1, 1, 1], latent_channels=32))
-        return _Component(SimpleNamespace())
+            return _Component(FrozenDict(block_out_channels=[1, 1, 1, 1], latent_channels=32))
+        return _Component(FrozenDict())
 
     monkeypatch.setattr(pipeline_flux2_klein, "get_local_device", lambda: torch.device("cpu"))
     monkeypatch.setattr(pipeline_flux2_klein, "prefetch_subfolders", lambda *_args, **_kwargs: None)
@@ -48,11 +53,14 @@ def test_klein_pipeline_loads_distributed_vae(monkeypatch) -> None:
         "setup_diffusion_pipeline_profiler",
         lambda *_args, **_kwargs: None,
     )
-    od_config = SimpleNamespace(
+    od_config = OmniDiffusionConfig(
         model="test-model",
-        tf_model_config={},
-        quantization_config=None,
-        enable_diffusion_pipeline_profiler=False,
+        num_gpus=vae_patch_parallel_size,
+        parallel_config=DiffusionParallelConfig(
+            tensor_parallel_size=vae_patch_parallel_size,
+            vae_parallel_mode=vae_parallel_mode,
+            vae_patch_parallel_size=vae_patch_parallel_size,
+        ),
     )
 
     pipeline_flux2_klein.Flux2KleinPipeline(od_config=od_config)
