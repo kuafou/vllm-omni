@@ -6,7 +6,7 @@ video generation using vLLM-Omni.
 ## Supported Models
 
 | Model | Model ID |
-| ------- | ---------- |
+|-------|----------|
 | Wan2.2 I2V | `Wan-AI/Wan2.2-I2V-A14B-Diffusers` |
 | SANA-Video 2B (480p) | `Efficient-Large-Model/SANA-Video_2B_480p_diffusers` |
 | SANA-Video 2B (720p) | `Efficient-Large-Model/SANA-Video_2B_720p_diffusers` |
@@ -24,7 +24,7 @@ request through the standard Videos API.
 ### Basic Start
 
 ```bash
-vllm serve Wan-AI/Wan2.2-I2V-A14B-Diffusers --omni --port 8099
+vllm serve Wan-AI/Wan2.2-I2V-A14B-Diffusers --omni --port 8091
 ```
 
 ### Start with Parameters
@@ -49,7 +49,7 @@ For a local Wan2.2-LightX2V Diffusers directory on Ascend/NPU, you can start the
 ```bash
 vllm serve /path/to/Wan2.2-I2V-A14B-LightX2V-Diffusers-Lightning \
   --omni \
-  --port 8099 \
+  --port 8091 \
   --flow-shift 12 \
   --cfg-parallel-size 1 \
   --ulysses-degree 4 \
@@ -91,7 +91,7 @@ file. Metadata is returned via response headers:
 - `X-Inference-Time-S`: wall-clock inference time in seconds
 
 ```bash
-curl -X POST http://localhost:8099/v1/videos/sync \
+curl -X POST http://localhost:8091/v1/videos/sync \
   -F "prompt=A bear playing with yarn, smooth motion" \
   -F "input_reference=@/path/to/input.png" \
   -F "size=832x480" \
@@ -113,7 +113,7 @@ For Wan Lightning/Distill checkpoints, pass `{"sample_solver":"euler"}` via `ext
 Example matching the local LightX2V deployment above:
 
 ```bash
-curl -sS -X POST http://localhost:8099/v1/videos/sync \
+curl -sS -X POST http://localhost:8091/v1/videos/sync \
   -H "Accept: video/mp4" \
   -F "prompt=A cat playing with yarn" \
   -F "input_reference=@/path/to/input.jpg" \
@@ -162,7 +162,7 @@ bash run_curl_image_to_video.sh
 SAMPLE_SOLVER=euler bash run_curl_image_to_video.sh
 
 # Or execute directly (OpenAI-style multipart)
-create_response=$(curl -s http://localhost:8099/v1/videos \
+create_response=$(curl -s http://localhost:8091/v1/videos \
   -H "Accept: application/json" \
   -F "prompt=A bear playing with yarn, smooth motion" \
   -F "negative_prompt=low quality, blurry, static" \
@@ -181,7 +181,7 @@ create_response=$(curl -s http://localhost:8099/v1/videos \
 
 video_id=$(echo "$create_response" | jq -r '.id')
 while true; do
-  status=$(curl -s "http://localhost:8099/v1/videos/${video_id}" | jq -r '.status')
+  status=$(curl -s "http://localhost:8091/v1/videos/${video_id}" | jq -r '.status')
   if [ "$status" = "completed" ]; then
     break
   fi
@@ -192,8 +192,8 @@ while true; do
   sleep 2
 done
 
-curl -s "http://localhost:8099/v1/videos/${video_id}" | jq .
-curl -L "http://localhost:8099/v1/videos/${video_id}/content" -o wan22_i2v_output.mp4
+curl -s "http://localhost:8091/v1/videos/${video_id}" | jq .
+curl -L "http://localhost:8091/v1/videos/${video_id}/content" -o wan22_i2v_output.mp4
 ```
 
 ## Request Format
@@ -201,7 +201,7 @@ curl -L "http://localhost:8099/v1/videos/${video_id}/content" -o wan22_i2v_outpu
 ### Required Fields
 
 ```bash
-curl -X POST http://localhost:8099/v1/videos \
+curl -X POST http://localhost:8091/v1/videos \
   -F "prompt=A bear playing with yarn, smooth motion" \
   -F "negative_prompt=low quality, blurry, static" \
   -F "input_reference=@/path/to/qwen-bear.png"
@@ -214,7 +214,7 @@ instead of uploading a file. Do not send `input_reference` and
 `image_reference` together.
 
 ```bash
-curl -X POST http://localhost:8099/v1/videos \
+curl -X POST http://localhost:8091/v1/videos \
   -F "prompt=A bear playing with yarn, smooth motion" \
   -F 'image_reference={"image_url":"https://example.com/qwen-bear.png"}'
 ```
@@ -222,7 +222,7 @@ curl -X POST http://localhost:8099/v1/videos \
 ### Generation with Parameters
 
 ```bash
-curl -X POST http://localhost:8099/v1/videos \
+curl -X POST http://localhost:8091/v1/videos \
   -F "prompt=A bear playing with yarn, smooth motion" \
   -F "negative_prompt=low quality, blurry, static" \
   -F "input_reference=@/path/to/qwen-bear.png" \
@@ -261,32 +261,32 @@ curl -X POST http://localhost:8099/v1/videos \
 ### Retrieve a job
 
 ```bash
-curl -s http://localhost:8099/v1/videos/${video_id} | jq .
+curl -s http://localhost:8091/v1/videos/${video_id} | jq .
 ```
 
 ### List jobs
 
 ```bash
-curl -s http://localhost:8099/v1/videos | jq .
+curl -s http://localhost:8091/v1/videos | jq .
 ```
 
 ### Download the completed video
 
 ```bash
-curl -L http://localhost:8099/v1/videos/${video_id}/content -o wan22_i2v_output.mp4
+curl -L http://localhost:8091/v1/videos/${video_id}/content -o wan22_i2v_output.mp4
 ```
 
 ### Delete a job and its stored file
 
 ```bash
-curl -X DELETE http://localhost:8099/v1/videos/${video_id} | jq .
+curl -X DELETE http://localhost:8091/v1/videos/${video_id} | jq .
 ```
 
 ## Poll Until Complete
 
 ```bash
 while true; do
-  status=$(curl -s http://localhost:8099/v1/videos/${video_id} | jq -r '.status')
+  status=$(curl -s http://localhost:8091/v1/videos/${video_id} | jq -r '.status')
   if [ "$status" = "completed" ]; then
     break
   fi

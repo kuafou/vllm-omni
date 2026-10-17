@@ -5,7 +5,7 @@ This example demonstrates how to deploy text-to-video models for online video ge
 ## Supported Models
 
 | Model | Model ID |
-| --- | --- |
+|-------|----------|
 | Wan2.1 T2V (1.3B) | `Wan-AI/Wan2.1-T2V-1.3B-Diffusers` |
 | Wan2.1 T2V (14B) | `Wan-AI/Wan2.1-T2V-14B-Diffusers` |
 | Wan2.2 T2V | `Wan-AI/Wan2.2-T2V-A14B-Diffusers` |
@@ -24,7 +24,7 @@ For SANA-Video 2B text-to-video online serving, see the
 #### Basic Start
 
 ```bash
-vllm serve Wan-AI/Wan2.2-T2V-A14B-Diffusers --omni --port 8098
+vllm serve Wan-AI/Wan2.2-T2V-A14B-Diffusers --omni --port 8091
 ```
 
 #### Start with Parameters
@@ -38,7 +38,7 @@ bash run_server.sh
 The script allows overriding:
 
 - `MODEL` (default: `Wan-AI/Wan2.2-T2V-A14B-Diffusers`)
-- `PORT` (default: `8098`)
+- `PORT` (default: `8091`)
 - `BOUNDARY_RATIO` (default: `0.875`)
 - `FLOW_SHIFT` (default: `5.0`)
 - `CACHE_BACKEND` (default: `none`)
@@ -76,7 +76,7 @@ file. Metadata is returned via response headers:
 - `X-Inference-Time-S`: wall-clock inference time in seconds
 
 ```bash
-curl -X POST http://localhost:8098/v1/videos/sync \
+curl -X POST http://localhost:8091/v1/videos/sync \
   -F "prompt=Two anthropomorphic cats in comfy boxing gear and bright gloves fight intensely on a spotlighted stage." \
   -F "size=832x480" \
   -F "num_frames=33" \
@@ -117,7 +117,7 @@ export VLLM_OMNI_SERVER_STORAGE__FILE_CONCURRENCY=8
 bash run_curl_text_to_video.sh
 
 # Or execute directly (OpenAI-style multipart)
-create_response=$(curl -s http://localhost:8098/v1/videos \
+create_response=$(curl -s http://localhost:8091/v1/videos \
   -H "Accept: application/json" \
   -F "prompt=Two anthropomorphic cats in comfy boxing gear and bright gloves fight intensely on a spotlighted stage." \
   -F "width=832" \
@@ -134,7 +134,7 @@ create_response=$(curl -s http://localhost:8098/v1/videos \
 
 video_id=$(echo "$create_response" | jq -r '.id')
 while true; do
-  status=$(curl -s "http://localhost:8098/v1/videos/${video_id}" | jq -r '.status')
+  status=$(curl -s "http://localhost:8091/v1/videos/${video_id}" | jq -r '.status')
   if [ "$status" = "completed" ]; then
     break
   fi
@@ -145,8 +145,8 @@ while true; do
   sleep 2
 done
 
-curl -s "http://localhost:8098/v1/videos/${video_id}" | jq .
-curl -L "http://localhost:8098/v1/videos/${video_id}/content" -o wan22_output.mp4
+curl -s "http://localhost:8091/v1/videos/${video_id}" | jq .
+curl -L "http://localhost:8091/v1/videos/${video_id}/content" -o wan22_output.mp4
 ```
 
 ## Request Format
@@ -154,14 +154,14 @@ curl -L "http://localhost:8098/v1/videos/${video_id}/content" -o wan22_output.mp
 ### Simple Text-to-Video Generation
 
 ```bash
-curl -X POST http://localhost:8098/v1/videos \
+curl -X POST http://localhost:8091/v1/videos \
   -F "prompt=A cinematic view of a futuristic city at sunset"
 ```
 
 ### Generation with Parameters
 
 ```bash
-curl -X POST http://localhost:8098/v1/videos \
+curl -X POST http://localhost:8091/v1/videos \
   -F "prompt=A cinematic view of a futuristic city at sunset" \
   -F "width=832" \
   -F "height=480" \
@@ -178,23 +178,23 @@ curl -X POST http://localhost:8098/v1/videos \
 
 ## Generation Parameters
 
-| Parameter | Type | Default | Description |
-| --- | --- | --- | --- |
-| `prompt` | str | - | Text description of the desired video |
-| `seconds` | str | None | Clip duration in seconds |
-| `size` | str | None | Output size in `WIDTHxHEIGHT` format |
-| `negative_prompt` | str | None | Negative prompt |
-| `width` | int | None | Video width in pixels |
-| `height` | int | None | Video height in pixels |
-| `num_frames` | int | None | Number of frames; when omitted, uses the model-specific default |
-| `fps` | int | None | Frames per second for output video |
-| `num_inference_steps` | int | None | Number of denoising steps |
-| `guidance_scale` | float | None | CFG guidance scale (low-noise stage) |
-| `guidance_scale_2` | float | None | CFG guidance scale (high-noise stage, Wan2.2) |
-| `boundary_ratio` | float | None | Boundary split ratio for low/high DiT (Wan2.2) |
-| `flow_shift` | float | None | Scheduler flow shift (Wan2.2) |
-| `seed` | int | None | Random seed (reproducible) |
-| `lora` | object | None | LoRA configuration |
+| Parameter             | Type   | Default | Description                                      |
+| --------------------- | ------ | ------- | ------------------------------------------------ |
+| `prompt`              | str    | -       | Text description of the desired video            |
+| `seconds`             | str    | None    | Clip duration in seconds                         |
+| `size`                | str    | None    | Output size in `WIDTHxHEIGHT` format             |
+| `negative_prompt`     | str    | None    | Negative prompt                                  |
+| `width`               | int    | None    | Video width in pixels                            |
+| `height`              | int    | None    | Video height in pixels                           |
+| `num_frames`          | int    | None    | Number of frames to generate                     |
+| `fps`                 | int    | None    | Frames per second for output video               |
+| `num_inference_steps` | int    | None    | Number of denoising steps                        |
+| `guidance_scale`      | float  | None    | CFG guidance scale (low-noise stage)             |
+| `guidance_scale_2`    | float  | None    | CFG guidance scale (high-noise stage, Wan2.2)     |
+| `boundary_ratio`      | float  | None    | Boundary split ratio for low/high DiT (Wan2.2)   |
+| `flow_shift`          | float  | None    | Scheduler flow shift (Wan2.2)                    |
+| `seed`                | int    | None    | Random seed (reproducible)                       |
+| `lora`                | object | None    | LoRA configuration                               |
 
 ## Create Response Format
 
@@ -216,32 +216,32 @@ curl -X POST http://localhost:8098/v1/videos \
 ### Retrieve a job
 
 ```bash
-curl -s http://localhost:8098/v1/videos/${video_id} | jq .
+curl -s http://localhost:8091/v1/videos/${video_id} | jq .
 ```
 
 ### List jobs
 
 ```bash
-curl -s http://localhost:8098/v1/videos | jq .
+curl -s http://localhost:8091/v1/videos | jq .
 ```
 
 ### Download the completed video
 
 ```bash
-curl -L http://localhost:8098/v1/videos/${video_id}/content -o wan22_output.mp4
+curl -L http://localhost:8091/v1/videos/${video_id}/content -o wan22_output.mp4
 ```
 
 ### Delete a job and its stored file
 
 ```bash
-curl -X DELETE http://localhost:8098/v1/videos/${video_id} | jq .
+curl -X DELETE http://localhost:8091/v1/videos/${video_id} | jq .
 ```
 
 ## Poll Until Complete
 
 ```bash
 while true; do
-  status=$(curl -s http://localhost:8098/v1/videos/${video_id} | jq -r '.status')
+  status=$(curl -s http://localhost:8091/v1/videos/${video_id} | jq -r '.status')
   if [ "$status" = "completed" ]; then
     break
   fi
